@@ -1,0 +1,85 @@
+{
+  "project": {
+    "name": "sez"
+  },
+  "db": {
+    "host": "Arhimed.local",
+    "user": "root",
+    "password": "1",
+    "database": "ner",
+    "import": "import",
+    "export": "output",
+    "batch_size": "10",
+    "current_row": "10"
+  },
+  "ner_config": [
+    {
+      "classification": [
+        {
+          "rule": {
+            "tag": "COLORS",
+            "matchers": {
+              "values": [
+                {
+                  "LOWER": {
+                    "REGEX": "(green|red)"
+                  }
+                }
+              ]
+            },
+            "excluders": {
+              "values": ["greens"]
+            }
+          }
+        },
+        {
+          "rule": {
+            "tag": "FRUITS",
+            "phrasematchers": {
+              "attr": ["LEMMA"],
+              "values": ["apple", "grapes"]
+            },
+            "excluders": {
+              "values": ["Apple"]
+            }
+          }
+        },
+        {
+          "rule": {
+            "tag": "VEGETABLES",
+            "phrasematchers": {
+              "attr": ["LEMMA"],
+              "values": ["potatoes"]
+            }
+          }
+        },
+        {
+          "rule": {
+            "tag": "HASDOC",
+            "matchers": {
+              "values": [
+                {
+                  "LOWER": "doc"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "rule": {
+            "tag": "DOCID",
+            "matchers": {
+              "values": [
+                {
+                  "LOWER": {
+                    "REGEX": "(\\d.\\d)"
+                  }
+                }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

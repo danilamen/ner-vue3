@@ -3,37 +3,42 @@
     v-if="editableTag"
     v-model:visible="isTagEditRulesModalOpened"
     :title="title"
+    :rules="editableTag"
+    @update:tagRules="updateTagRules"
   />
   <a-modal
     v-model:visible="isVisible"
     :title="`Редактирование набора №${props.title}`"
-    @ok="handleOk"
+    @ok="saveTags"
     width="850px"
     class="table-modal-tags-edit"
     centered
   >
     <template #footer>
-      <a-button key="save" type="primary" @click="handleOk"
+      <a-button key="save" type="primary" @click="saveTags"
         ><SaveOutlined /> Сохранить выделенные в набор
       </a-button>
-      <a-button key="delete" @click="handleReset"><CloseOutlined /> Удалить тэг(и)</a-button>
+      <a-button key="delete" @click="deleteTags"><CloseOutlined /> Удалить тэг(и)</a-button>
     </template>
     <div class="table-modal-tags-edit__input">
       <span>Создать тэг:</span>
-      <a-input-search v-model:value="value" placeholder="Название набора" @search="onSearch">
+      <a-input-search v-model:value="tagName" placeholder="Название набора" @search="addTag">
         <template #enterButton>
           <a-button type="primary">⏎</a-button>
         </template>
       </a-input-search>
     </div>
     <a-checkbox-group v-model:value="selectedTags" style="width: 100%">
-      <a-table :dataSource="tableData" :columns="columns" bordered>
+      <a-table :dataSource="tags" :columns="columns" bordered>
         <template #bodyCell="{ column, record }">
           <template v-if="column.key === 'checkbox'">
-            <a-checkbox :value="record.tag"></a-checkbox>
+            <a-checkbox :value="record.tag.rule.tag"></a-checkbox>
           </template>
           <template v-if="column.key === 'rules'">
             <a-button @click="handleEditTagButtonClick(record)"><EllipsisOutlined /></a-button>
+          </template>
+          <template v-if="column.key === 'tag'">
+            <span>{{ record.tag.rule.tag }}</span>
           </template>
         </template>
       </a-table>
@@ -42,16 +47,21 @@
 </template>
 
 <script setup>
-import { defineProps, computed, defineEmits, ref, watch } from 'vue'
-import TableModalTagsEditRules from './table-modal-tags-edit-rules'
+import { defineProps, computed, defineEmits, ref, watch, onUpdated } from 'vue'
+import TableModalTagsEditRules from '../table-modal-tags-edit-rules'
 import { EllipsisOutlined, SaveOutlined, CloseOutlined } from '@ant-design/icons-vue'
+import { useNerConfigStore } from '../../stores/nerConfigStore'
+import { deleteSelected } from '../utils'
+
+const nerConfigStore = useNerConfigStore()
 
 const props = defineProps({
   visible: Boolean,
-  title: Number
+  title: Number,
+  tags: Object
 })
 
-const emit = defineEmits(['update:visible'])
+const emit = defineEmits(['update:visible', 'update:tagsSet'])
 
 const isVisible = computed({
   get() {
@@ -64,6 +74,15 @@ const isVisible = computed({
 
 const selectedTags = ref(undefined)
 
+onUpdated(() => {
+  if (!props.tags) {
+    return
+  }
+
+  selectedTags.value = props.tags.tagsSet.split('; ')
+  console.log(selectedTags.value)
+})
+
 watch(selectedTags, () => console.log(selectedTags.value))
 
 const columns = [
@@ -74,8 +93,8 @@ const columns = [
   },
   {
     title: '#',
-    dataIndex: 'id',
-    key: 'id'
+    dataIndex: 'number',
+    key: 'number'
   },
   {
     title: 'Тэги',
@@ -89,21 +108,37 @@ const columns = [
   }
 ]
 
-const tableData = [
-  { id: 0, tag: 'COLORS' },
-  { id: 1, tag: 'FRUITS' },
-  { id: 2, tag: 'VEGETABLES' },
-  { id: 3, tag: 'HASDOC' },
-  { id: 4, tag: 'DOCID' },
-  { id: 5, tag: 'sdf' }
-]
+const tags = computed(() =>
+  nerConfigStore.ner_config[0].classification.map((tag, idx) => {
+    return {
+      id: tag.rule.tag,
+      tag,
+      number: idx
+    }
+  })
+)
 
-const handleOk = () => {
+console.log(tags)
+
+const saveTags = () => {
+  if (!selectedTags.value) {
+    emit('update:tagsSet', selectedTags.value.join(''))
+    return
+  }
+
+  emit('update:tagsSet', selectedTags.value.join('; '))
   isVisible.value = false
 }
 
-const handleReset = () => {
-  isVisible.value = false
+const deleteTags = () => {
+  const { newArray, newSelectedArray } = deleteSelected(
+    tags.value,
+    selectedTags.value.map((tag) => ({ id: tag, tag }))
+  )
+
+  nerConfigStore.ner_config[0].classification = newArray.map(({ tag }) => tag)
+  selectedTags.value = newSelectedArray
+  console.log(selectedTags.value)
 }
 
 const isTagEditRulesModalOpened = ref(false)
@@ -112,6 +147,30 @@ const editableTag = ref(undefined)
 const handleEditTagButtonClick = (record) => {
   isTagEditRulesModalOpened.value = true
   editableTag.value = record
+}
+
+const tagName = ref('')
+
+const addTag = () => {
+  nerConfigStore.ner_config[0].classification.push({
+    rule: {
+      tag: tagName.value
+    }
+  })
+
+  tagName.value = ''
+}
+
+const updateTagRules = (tag) => {
+  nerConfigStore.ner_config[0].classification = nerConfigStore.ner_config[0].classification.map(
+    (oldTag) => {
+      if (oldTag.rule.tag !== editableTag.value.tag.rule.tag) {
+        return oldTag
+      }
+
+      return tag
+    }
+  )
 }
 </script>
 

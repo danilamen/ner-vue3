@@ -7,6 +7,10 @@ import AppTable from './components/app-table.vue'
   <div id="app">
     <AppHeader />
     <AppTable class="app__table" />
+    <div class="app__footer">
+      <a-button type="primary">Сохранить сопоставление</a-button>
+      <a-button>Протегировать и отправить для анализа</a-button>
+    </div>
   </div>
 </template>
 
@@ -20,5 +24,11 @@ import AppTable from './components/app-table.vue'
 
 .app__table {
   border: 1px solid lightgrey;
+}
+
+.app__footer {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
 }
 </style>
